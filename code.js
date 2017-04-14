@@ -26,6 +26,10 @@ var PAYMENT_TYPES = [
   'ImpuestoMoratorios'
 ];
 
+var PAYMENT_TYPES_COLUMNS = [
+    'L', 'M', 'N', 'O', 'P'
+];
+
 var TOTAL_MAPPINGS = {
     'ABONO': 'B1',
     'COMISION': 'B6',
@@ -50,7 +54,8 @@ function setSheets() {
 function onOpen() {
  setSheets();
   var menuEntries = [
-    {name: "Process Operations", functionName: "processOperations"}
+    {name: "Process Operations", functionName: "processOperations"},
+    {name: "Process Payments", functionName: "processPayments"}
   ];
   operationsSheet.addMenu("Process Operations", menuEntries);
 }
@@ -66,6 +71,7 @@ function initTotalsByType(types) {
 function processOperations() {
     var operationType,
         totalsByType,
+        date,
         amount;
 
     totalsByType = initTotalsByType(OPERATION_TYPES);
@@ -77,6 +83,9 @@ function processOperations() {
                 // Get amount
                 amount = operationsSheet.getRange('F' + i).getValue();
                 totalsByType[operationType] += amount;
+                // Set date
+                date = operationsSheet.getRange('B' + i).getValue();
+                operationsSheet.getRange('K' + i).setValue(date.substring(0,10));
             }
         } else {
             break;
@@ -88,13 +97,13 @@ function processOperations() {
         var range = TOTAL_MAPPINGS[operationType];
         operationsSheet.getRange(range).setValue(total);
     }
-
-    processPayments();
 }
 
 // Principal: 151.2554 Interes: 33.8447 Impuesto Interes: 5.41515 Moratorios: 0 Impuesto Moratorios: 0
 function processPayments() {
     var totalsByType,
+        paymentTypeColumn,
+        paymentAmount,
         detail;
 
     totalsByType = initTotalsByType(PAYMENT_TYPES);
@@ -117,7 +126,10 @@ function processPayments() {
                     if (payment !== null && payment !== '') {
                         var paymentData = payment.split(':');
                         if (paymentData.length === 2) {
-                            totalsByType[paymentData[0]] += Math.abs(paymentData[1]);
+                            paymentAmount = Math.abs(paymentData[1]);
+                            totalsByType[paymentData[0]] += paymentAmount;
+                            paymentTypeColumn = PAYMENT_TYPES_COLUMNS[j];
+                            operationsSheet.getRange(paymentTypeColumn + i).setValue(paymentAmount);
                         }
                     }
                 }
