@@ -39,11 +39,27 @@ var TOTAL_MAPPINGS = {
 };
 
 var PAYMENT_MAPPINGS = {
-    'Principal': 'B9',
-    'Interes': 'B10',
-    'ImpuestoInteres': 'B11',
-    'Moratorios': 'B12',
-    'ImpuestoMoratorios': 'B13'
+    'Principal': 'B10',
+    'Interes': 'B11',
+    'ImpuestoInteres': 'B12',
+    'Moratorios': 'B13',
+    'ImpuestoMoratorios': 'B14'
+};
+
+var PAYMENT_MAPPINGS_ADDITIONAL = {
+    'Principal': 'C10',
+    'Interes': 'C11',
+    'ImpuestoInteres': 'C12',
+    'Moratorios': 'C13',
+    'ImpuestoMoratorios': 'C14'
+};
+
+var PAYMENT_MAPPINGS_ADDITIONAL = {
+    'Principal': 'D10',
+    'Interes': 'D11',
+    'ImpuestoInteres': 'D12',
+    'Moratorios': 'D13',
+    'ImpuestoMoratorios': 'D14'
 };
 
 function setSheets() {
@@ -55,7 +71,8 @@ function onOpen() {
  setSheets();
   var menuEntries = [
     {name: "Process Operations", functionName: "processOperations"},
-    {name: "Process Payments", functionName: "processPayments"}
+    {name: "Process All Payments", functionName: "processAllPayments"},
+    {name: "Process Selected Payments", functionName: "processSelectedPayments"}
   ];
   operationsSheet.addMenu("Process Operations", menuEntries);
 }
@@ -66,6 +83,16 @@ function initTotalsByType(types) {
         totalsByType[type] = 0;
     }
     return totalsByType;
+}
+
+function initCurrentPayments() {
+    var paymentsByType = {};
+    var paymentValue;
+    for (var i = 0, type;(type = PAYMENT_TYPES[i]); i++) {
+        paymentValue = operationsSheet.getRange(PAYMENT_MAPPINGS[type]).getValue();
+        paymentsByType[type] = paymentValue;
+    }
+    return paymentsByType;
 }
 
 function processOperations() {
@@ -100,15 +127,46 @@ function processOperations() {
 }
 
 // Principal: 151.2554 Interes: 33.8447 Impuesto Interes: 5.41515 Moratorios: 0 Impuesto Moratorios: 0
-function processPayments() {
-    var totalsByType,
+function processAllPayments() {
+    var totalsByType;
+
+    totalsByType = initTotalsByType(PAYMENT_TYPES);
+    processPaymentRows(ROW_START, PAYMENT_MAPPINGS, totalsByType);
+}
+
+function processSelectedPayments() {
+    var paymentsByType,
+        rowStart,
+        detail;
+
+    paymentsByType = initCurrentPayments();
+
+    var ui = SpreadsheetApp.getUi();
+    var response = ui.prompt('Start Row Number', 'What is first row number you want to process?', ui.ButtonSet.OK_CANCEL);
+
+    if (response.getSelectedButton() == ui.Button.OK) {
+        rowStart = response.getResponseText() + 0;
+    } else if (response.getSelectedButton() == ui.Button.CANCEL) {
+        Logger.log('The user canceled the dialog.');
+    } else {
+        Logger.log('The user closed the dialog.');
+    }
+
+    //TODO Process date
+
+    processPaymentRows(rowStart, PAYMENT_MAPPINGS_ADDITIONAL, paymentsByType);
+}
+
+
+
+function processPaymentRows(rowStart, paymentMappings, totalsByType) {
+    //TODO Remove sums
+    var paymentsByType,
         paymentTypeColumn,
         paymentAmount,
         detail;
 
-    totalsByType = initTotalsByType(PAYMENT_TYPES);
-
-    for (var i = ROW_START, operation; (operation = operationsSheet.getRange('D' + i)); i++) {
+    for (var i = rowStart, operation; (operation = operationsSheet.getRange('D' + i)); i++) {
         operationType = operation.getValue();
 
         if (operationType !== '') {
@@ -141,7 +199,7 @@ function processPayments() {
 
     for (var i = 0, paymentType; (paymentType = PAYMENT_TYPES[i]); i++) {
         var total = totalsByType[paymentType];
-        var range = PAYMENT_MAPPINGS[paymentType];
+        var range = paymentMappings[paymentType];
         operationsSheet.getRange(range).setValue(total);
     }
 }
